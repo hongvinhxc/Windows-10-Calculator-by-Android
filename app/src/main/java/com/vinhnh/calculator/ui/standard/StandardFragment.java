@@ -12,37 +12,21 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.vinhnh.calculator.R;
 
-import java.math.BigDecimal;
-
 public class StandardFragment extends Fragment implements View.OnClickListener, View.OnTouchListener {
 
-    // result
-    private String result;
-    // current number
-    private String currNum;
-    // prev result
-    private String prevResult;
-    // history
-    private String history;
-    // prev btn pressed
+    private String firstOperand;
+    private String secondOperand;
+    private String currentNumber;
+    private String operator;
+    private String firstOperandSubOperator;
+    private String secondOperandSubOperator;
     private String prevBtn;
-    // math operation
-    private String mathOp;
-    // prev math operation
-    private String prevMathOp;
-    // math operation counter
-    private Integer mathOpCount;
-    // math op pressed?
-    private Boolean mathOpPress;
-    // init
     private Boolean isInit;
-
 
     Button buttonNumber0;
     Button buttonNumber1;
@@ -83,6 +67,8 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
         setOnTouchListener();
 
         initData();
+        updateMainScreen();
+        updateHistoryScreen();
 
         return root;
     }
@@ -183,8 +169,85 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
 
     @Override
     public void onClick(View view) {
-        String btnClicked = (String) view.getTag();
-        clickButton(btnClicked);
+        String btn = (String) view.getTag();
+        switch (view.getId()) {
+            case R.id.button_zero:
+                clickNumber("0");
+                break;
+            case R.id.button_one:
+                clickNumber("1");
+                break;
+            case R.id.button_two:
+                clickNumber("2");
+                break;
+            case R.id.button_three:
+                clickNumber("3");
+                break;
+            case R.id.button_four:
+                clickNumber("4");
+                break;
+            case R.id.button_five:
+                clickNumber("5");
+                break;
+            case R.id.button_six:
+                clickNumber("6");
+                break;
+            case R.id.button_seven:
+                clickNumber("7");
+                break;
+            case R.id.button_eight:
+                clickNumber("8");
+                break;
+            case R.id.button_nine:
+                clickNumber("9");
+                break;
+            case R.id.button_dot:
+                clickNumber(".");
+                break;
+            case R.id.button_addition:
+                clickOperator("+");
+                break;
+            case R.id.button_subtraction:
+                clickOperator("-");
+                break;
+            case R.id.button_multiplication:
+                clickOperator("*");
+                break;
+            case R.id.button_division:
+                clickOperator("/");
+                break;
+            case R.id.button_equal:
+                clickEqual();
+                break;
+            case R.id.button_reverse_sign:
+                clickReverseSign();
+                break;
+            case R.id.button_percent:
+                clickPercent();
+                break;
+            case R.id.button_fraction:
+                clickFraction();
+                break;
+            case R.id.button_square:
+                clickSqr();
+                break;
+            case R.id.button_sqrt:
+                clickSqrt();
+                break;
+            case R.id.button_clear_entry:
+                clickClearEntry();
+                break;
+            case R.id.button_clear:
+                clickClear();
+                break;
+            case R.id.button_backspace:
+                clickBackspace();
+                break;
+        }
+        prevBtn = btn;
+        updateMainScreen();
+        updateHistoryScreen();
+        isInit = false;
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -206,278 +269,245 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
     }
 
     private void initData() {
-        result = "";
-        currNum = "0";
-        prevBtn = "";
-        mathOp = null;
-        prevMathOp = null;
-        mathOpCount = 0;
-        history = "";
-        mathOpPress = false;
+        firstOperand = "0";
+        secondOperand = "0";
+        currentNumber = "0";
+        operator = null;
+        firstOperandSubOperator = null;
+        secondOperandSubOperator = null;
+        prevBtn = null;
         isInit = true;
-        updateMainScreen("0");
-        updateHistoryScreen(history);
     }
 
-    private void clickButton(String btn) {
-        Log.d("ActivityLog", "Click button: " + btn);
+    private void clickNumber(String btn) {
+        if (prevBtn != null && prevBtn.equals("=")) {
+            initData();
+            currentNumber = btn;
+            return;
+        }
+        if (prevBtn != null && "+-*/".contains(prevBtn)) {
+            currentNumber = "0";
+        }
+        if (btn.equals(".") && !currentNumber.contains(".")) {
+            currentNumber += btn;
+        }
+        if ("0123456789".contains(btn) && !currentNumber.equals("0")) {
+            currentNumber += btn;
+        }
+        if ("0123456789".contains(btn) && currentNumber.equals("0")) {
+            currentNumber = btn;
+        }
+    }
 
-        // copy prev math op
-        if (isNumeric(prevBtn) && !btn.equals("=") && !btn.equals("C") && !btn.equals("CE") && !btn.equals("CS") && !btn.equals(".")) {
-            prevMathOp = mathOp;
+    private void clickOperator(String btn) {
+        if (operator == null || prevBtn.equals("=")) {
+            firstOperand = currentNumber;
+        }
+        if (operator != null && !prevBtn.equals("=")) {
+            secondOperand = currentNumber;
+            firstOperand = calculateOperator();
+            currentNumber = firstOperand;
+        }
+        operator = btn;
+    }
+
+    private void clickEqual() {
+        if (operator == null) {
+            firstOperand = currentNumber;
+        }
+        if (operator != null) {
+            if (prevBtn != null && prevBtn.equals("=")) {
+                firstOperand = currentNumber;
+
+            } else {
+                secondOperand = currentNumber;
+
+            }
+            currentNumber = calculateOperator();
+        }
+    }
+
+    private void clickReverseSign() {
+        if (currentNumber.equals("0")) return;
+        if (prevBtn != null && prevBtn.equals("=")) {
+            String tmp = currentNumber;
+            initData();
+            currentNumber = tmp;
+        }
+        if (currentNumber.charAt(0) == '-') {
+            currentNumber = currentNumber.substring(1);
+        } else {
+            currentNumber = "-" + currentNumber;
+        }
+    }
+
+    private void clickPercent() {
+        if ((prevBtn != null && prevBtn.equals("=")) || operator == null) {
+            initData();
+            return;
         }
 
-        switch (btn) {
-            case "+":
-                mathOpPress = true;
-                mathOp = "+";
-                break;
-            case "-":
-                mathOpPress = true;
-                mathOp = "-";
-                break;
-            case "/":
-                mathOpPress = true;
-                mathOp = "/";
-                break;
-            case "*":
-                mathOpPress = true;
-                mathOp = "*";
-                break;
-            case "C":
-                initData();
-                break;
-        }
-
-        handler(btn);
-
-        // return to default input text size
-        if (textViewInputNumber.getText().length() < 11) {
-            textViewInputNumber.setTextSize(TypedValue.COMPLEX_UNIT_SP, 60);
-        }
-
-        Log.d("Result", result);
-        Log.d("Prev result", prevResult);
-        Log.d("current number", currNum);
-        Log.d("btn", btn);
-        Log.d("Prev Math Op", String.valueOf(prevMathOp));
-        Log.d("Math Op Counter", String.valueOf(mathOpCount));
-        Log.d("Prev btn", prevBtn);
-        Log.d("History", history);
-        Log.d("Main Screen", (String) textViewInputNumber.getText());
-        Log.d("====================", "==========================");
+        currentNumber = calculatePercent();
+        secondOperand = currentNumber;
 
     }
 
-    private void updateMainScreen(String val) {
+    private void clickFraction() {
+        if (operator == null) {
+            firstOperand = currentNumber;
+            firstOperandSubOperator = "1/x";
+        } else {
+            secondOperand = currentNumber;
+            secondOperandSubOperator = "1/x";
+        }
+        currentNumber = fraction();
+    }
+
+    private void clickSqr() {
+        if (operator == null) {
+            firstOperand = currentNumber;
+            firstOperandSubOperator = "sqr";
+        } else {
+            secondOperand = currentNumber;
+            secondOperandSubOperator = "sqr";
+        }
+        currentNumber = sqr();
+    }
+
+    private void clickSqrt() {
+        if (operator == null) {
+            firstOperand = currentNumber;
+            firstOperandSubOperator = "sqrt";
+        } else {
+            secondOperand = currentNumber;
+            secondOperandSubOperator = "sqrt";
+        }
+        currentNumber = sqrt();
+    }
+
+    private void clickClearEntry() {
+        currentNumber = "0";
+        updateMainScreen();
+        updateHistoryScreen();
+    }
+
+    private void clickClear() {
+        initData();
+        updateMainScreen();
+        updateHistoryScreen();
+    }
+
+    private void clickBackspace() {
+        if (currentNumber.length() == 1) {
+            currentNumber = "0";
+        }
+        if (currentNumber.length() > 1) {
+            currentNumber = currentNumber.substring(0, currentNumber.length() - 1);
+        }
+    }
+
+    private void updateMainScreen() {
         // set input text size when number length too long
 
-        if (val.equals("Infinity")) {
-            val = "Cannot divide by zero";
+        if (currentNumber.equals("Infinity")) {
+            currentNumber = "Cannot divide by zero";
+            initData();
         }
-        if (val.length() > 10) {
+        if (currentNumber.length() > 10) {
             textViewInputNumber.setTextSize(TypedValue.COMPLEX_UNIT_SP, 40);
         }
-        textViewInputNumber.setText(val);
+        textViewInputNumber.setText(currentNumber);
     }
 
-    private void updateHistoryScreen(String history) {
+    private void updateHistoryScreen() {
+        String history = "";
+        String first = makeOperand(firstOperand, firstOperandSubOperator);
+        String second = makeOperand(secondOperand, secondOperandSubOperator);
+        if (isInit) {
+            textViewInputChain.setText(history);
+            return;
+        }
+        if (operator == null && !prevBtn.equals("=")) return;
+        if (operator == null && prevBtn.equals("=")) {
+            history = first + " =";
+            textViewInputChain.setText(history);
+            return;
+        };
+        if (prevBtn.equals("=")) {
+            history = first + " " + operator + " " + second + " =";
+        } else if (prevBtn.equals("%")) {
+            history = first + " " + operator+ " " + second;
+        } else {
+            history = first + " " + operator;
+        }
         textViewInputChain.setText(history);
+    }
+
+    private String calculateOperator() {
+        Double first = Double.parseDouble(firstOperand);
+        Double second = Double.parseDouble(secondOperand);
+        Double result = 0d;
+        switch (operator) {
+            case "+":
+                result = first + second;
+                break;
+            case "-":
+                result = first -+ second;
+                break;
+            case "*":
+                result = first * second;
+                break;
+            case "/":
+                result = first / second;
+                break;
+        }
+        return parse(result, 8);
     }
 
     private static boolean isNumeric(String str) {
         return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
     }
 
-    private void handler(String btn) {
-        // return if C wasn't pressed when divide by zero was done
-        if (!btn.equals("C") && result.equals("Infinity")) {
-            return;
-        }
-
-        if (isNumeric(btn) && prevBtn.equals("=")) {
-            initData();
-        }
-
-        // update history
-        if (!btn.equals("=") && !btn.equals("C") && !btn.equals("CE") && !btn.equals("CS")) {
-            history = (!isNumeric(prevBtn) && !isNumeric(btn)) ? history.substring(0, history.length() - 1) + btn : history + btn;
-        }
-
-        // btn clicked is `Number` or `.`
-        if (isNumeric(btn) || btn.equals(".")) {
-            if (btn.equals(".") && currNum.matches("^\\d+$")) {
-                currNum = currNum + btn;
-            } else if (isNumeric(btn)) {
-                currNum = (isNumeric(prevBtn) && !prevBtn.equals("") && textViewInputNumber.getText() != "0") || prevBtn.equals(".") ? currNum + btn : btn;
-            }
-            mathOpPress = false;
-            updateMainScreen(currNum);
-            // btn clicked is `Sign`
-        } else {
-            // update history
-            if (btn.equals("-") || btn.equals("+") || btn.equals("*") || btn.equals("/")) {
-                // for example, when `-` is pressed, add `0 -` to history screen
-                if ((prevBtn.equals("") || prevBtn.equals("=")) && !isInit) {
-                    history = '0' + btn;
-                    mathOpCount++;
-                }
-
-                if (textViewInputChain.getText().length() == 0 && textViewInputNumber.getText().length() == 0) {
-                    history = textViewInputNumber.getText() + btn;
-                }
-            }
-
-            // if math op was pressed and result is null
-            if (mathOp != null && result.equals("")) {
-                result = currNum;
-            }
-
-            // count percents
-            if (btn.equals("%")) {
-                history = history.substring(0, history.length() - currNum.length() - 1);
-                currNum = percentage(currNum, result);
-                history += currNum + ' ';
-                updateMainScreen(currNum);
-                // count square or square root
-            } else if (btn.equals("sqr") || btn.equals("sqrt") || btn.equals("1/x")) {
-                history = history.substring(0, history.length() - (currNum.length() + btn.length())) + (btn.equals("1/x") ? "1/(" + currNum + ") " : btn + "(" + currNum + ") ");
-                currNum = (btn.equals("sqr")) ? square(currNum) : (btn.equals("sqrt")) ? squareRoot(currNum) : fraction(currNum);
-                updateMainScreen(currNum);
-                updateHistoryScreen(history);
-            }
-
-            // count result
-            if (btn.equals("=")) {
-                // if math op exists
-                if (mathOp != null) {
-                    mathOpCount = 0;
-                    // if last button pressed is `mathOperation`
-                    // like `+, - etc.` before `=` was pressed
-                    if (mathOpPress) {
-                        switch (mathOp) {
-                            case "+":
-                                addition(prevResult);
-                                break;
-                            case "-":
-                                subtraction(prevResult);
-                                break;
-                            case "/":
-                                division(prevResult);
-                                break;
-                            case "*":
-                                multiplication(prevResult);
-                                break;
-                        }
-                    } else { // if last button pressed is `digit` before `=` was pressed
-                        switch (mathOp) {
-                            case "+":
-                                addition(currNum);
-                                break;
-                            case "-":
-                                subtraction(currNum);
-                                break;
-                            case "/":
-                                division(currNum);
-                                break;
-                            case "*":
-                                multiplication(currNum);
-                                break;
-                        }
-                    }
-
-                    history = "";
-                    prevBtn = btn;
-
-                    updateMainScreen(result);
-                    updateHistoryScreen(history);
-
-                    return;
-                }
-            }
-
-            // count math ops
-            // if sign was pressed and prev btn isn't sign and except some buttons
-            if (!isNumeric(btn) && (isNumeric(prevBtn) || prevBtn.equals("%") || prevBtn.equals("sqr") || prevBtn.equals("sqrt") || prevBtn.equals("1/x")) &&
-                    !btn.equals("=") && !btn.equals("C") && !btn.equals("CE") && !btn.equals("CS") && !btn.equals(".") && !btn.equals("%") && !btn.equals("sqr") & !btn.equals("sqrt") && !btn.equals("1/x")) {
-                mathOpCount++;
-            }
-
-            // count result in row
-            if (mathOpCount >= 2 && (isNumeric(prevBtn) || prevBtn.equals("sqrt") || prevBtn.equals("sqr") || prevBtn.equals("1/x") || prevBtn.equals("%")) && !btn.equals("CE") && !btn.equals("CS")) {
-                switch (prevMathOp) {
-                    case "+":
-                        addition(currNum);
-                        break;
-                    case "-":
-                        subtraction(currNum);
-                        break;
-                    case "/":
-                        division(currNum);
-                        break;
-                    case "*":
-                        multiplication(currNum);
-                        break;
-                }
-                updateMainScreen(result);
-            }
-
-            if (btn.equals("CE") && history.length() > 0) {
-                history = history.substring(0, history.length() - currNum.length());
-                currNum = "0";
-                updateMainScreen("0");
-            } else if (btn.equals("CS")) {
-                if (result != textViewInputNumber.getText()) {
-                    currNum = currNum.substring(0, currNum.length()-1);
-                    history = history.substring(0, history.length()-1);
-                    if (currNum.length() == 0) {
-                        currNum = "0";
-                    }
-                    updateMainScreen(currNum);
-                } else {
-                    return;
-                }
-            }
-
-            if (!result.equals("") && !btn.equals("CE") && !btn.equals("CS")) {
-                updateHistoryScreen(history);
-            }
-        }
-
-        prevBtn = btn;
-        prevResult = result;
-        isInit = false;
+    @SuppressLint("DefaultLocale")
+    public String parse(double num, int digit) {
+        String result;
+        if((int) num == num) result = String.format("%.0f", num);
+        else result = String.format("%." + digit + "f", num);
+        result = result.contains(".") ? result.replaceAll("0*$","").replaceAll("\\.$","") : result;
+        return  result;
     }
 
-    private String percentage(String val, String res) {
-        return String.valueOf(Double.parseDouble(res) * Double.parseDouble(val) / 100);
+    private String calculatePercent() {
+        Double first = Double.parseDouble(firstOperand);
+        Double current = Double.parseDouble(currentNumber);
+        Double result = first * current / 100;
+        return parse(result, 8);
     }
 
-    private String square(String val) {
-        return String.valueOf(Double.parseDouble(val) * Double.parseDouble(val));
+    private String fraction() {
+        Double current = Double.parseDouble(currentNumber);
+        Double result = 1 / current;
+        return parse(result, 8);
     }
 
-    private String squareRoot(String val) {
-        return String.valueOf(Math.sqrt(Double.parseDouble(val)));
+    private String sqr() {
+        Double current = Double.parseDouble(currentNumber);
+        Double result = current * current;
+        return parse(result, 8);
     }
 
-    private String fraction(String val) {
-        return String.valueOf(1/Double.parseDouble(val));
+    private String sqrt() {
+        Double current = Double.parseDouble(currentNumber);
+        Double result = Math.sqrt(current);
+        return parse(result, 8);
     }
 
-    private void addition(String val) {
-        result = String.valueOf(Double.parseDouble(result) + Double.parseDouble(val));
+    private String makeOperand(String operand, String subOperator) {
+//        if (subOperator == null) return operand;
+//        if (subOperator.equals("1/x")) return "1/(" + operand + ")";
+//        if (subOperator.equals("sqr")) return "sqr(" + operand + ")";
+//        if (subOperator.equals("sqrt")) return "\u221A(" + operand + ")";
+        return operand;
     }
 
-    private void subtraction(String val) {
-        result = String.valueOf(Double.parseDouble(result) - Double.parseDouble(val));
-    }
-
-    private void multiplication(String val) {
-        result = String.valueOf(Double.parseDouble(result) * Double.parseDouble(val));
-    }
-
-    private void division(String val) {
-        result = String.valueOf(Double.parseDouble(result) / Double.parseDouble(val));
-    }
 }

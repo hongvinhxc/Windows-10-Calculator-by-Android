@@ -324,7 +324,8 @@ public class CurrencyFragment extends Fragment implements AdapterView.OnItemSele
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-
+                Toast.makeText(getActivity(), "Xảy ra lỗi khi get dữ liệu tỉ giá", Toast.LENGTH_SHORT).show();
+                t.printStackTrace();
             }
         });
     }
@@ -404,7 +405,10 @@ public class CurrencyFragment extends Fragment implements AdapterView.OnItemSele
 
     @SuppressLint("DefaultLocale")
     public String parse(double num, int digit) {
-        if((int) num == num) return String.format("%.0f", num);
-        return String.format("%." + digit + "f", num);
+        String result;
+        if((int) num == num) result = String.format("%.0f", num);
+        else result = String.format("%." + digit + "f", num);
+        result = result.contains(".") ? result.replaceAll("0*$","").replaceAll("\\.$","") : result;
+        return  result;
     }
 }
