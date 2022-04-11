@@ -23,8 +23,8 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
     private String secondOperand;
     private String currentNumber;
     private String operator;
-    private String firstOperandSubOperator;
-    private String secondOperandSubOperator;
+    private String firstOperandBeauty;
+    private String secondOperandBeauty;
     private String prevBtn;
     private Boolean isInit;
 
@@ -243,8 +243,10 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
             case R.id.button_backspace:
                 clickBackspace();
                 break;
+            default:
+                return;
         }
-        prevBtn = btn;
+        if (prevBtn == null || !btn.equals("CS")) prevBtn = btn;
         updateMainScreen();
         updateHistoryScreen();
         isInit = false;
@@ -253,17 +255,20 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
-        switch (motionEvent.getAction()) {
-            case MotionEvent.ACTION_DOWN: {
-                view.getBackground().setColorFilter(Color.LTGRAY, PorterDuff.Mode.SRC_ATOP);
-                view.invalidate();
-                break;
+        try {
+            switch (motionEvent.getAction()) {
+                case MotionEvent.ACTION_DOWN: {
+                    view.getBackground().setColorFilter(Color.LTGRAY, PorterDuff.Mode.SRC_ATOP);
+                    view.invalidate();
+                    break;
+                }
+                case MotionEvent.ACTION_UP: {
+                    view.getBackground().clearColorFilter();
+                    view.invalidate();
+                    break;
+                }
             }
-            case MotionEvent.ACTION_UP: {
-                view.getBackground().clearColorFilter();
-                view.invalidate();
-                break;
-            }
+        } catch (Exception e) {
         }
         return false;
     }
@@ -273,14 +278,14 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
         secondOperand = "0";
         currentNumber = "0";
         operator = null;
-        firstOperandSubOperator = null;
-        secondOperandSubOperator = null;
+        firstOperandBeauty = null;
+        secondOperandBeauty = null;
         prevBtn = null;
         isInit = true;
     }
 
     private void clickNumber(String btn) {
-        if (prevBtn != null && prevBtn.equals("=")) {
+        if (prevBtn != null && (prevBtn.equals("=") || prevBtn.equals("1/x") || prevBtn.equals("sqr") || prevBtn.equals("sqrt"))) {
             initData();
             currentNumber = btn;
             return;
@@ -297,15 +302,25 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
         if ("0123456789".contains(btn) && currentNumber.equals("0")) {
             currentNumber = btn;
         }
+
+        if (operator != null) {
+            secondOperandBeauty = null;
+        }
     }
 
     private void clickOperator(String btn) {
-        if (operator == null || prevBtn.equals("=")) {
+        if (operator == null) {
             firstOperand = currentNumber;
+        }
+        if (prevBtn.equals("=")) {
+            firstOperand = currentNumber;
+            firstOperandBeauty = null;
         }
         if (operator != null && !prevBtn.equals("=")) {
             secondOperand = currentNumber;
+            if (!prevBtn.equals("1/x") && !prevBtn.equals("sqr") && !prevBtn.equals("sqrt")) secondOperandBeauty = null;
             firstOperand = calculateOperator();
+            firstOperandBeauty = null;
             currentNumber = firstOperand;
         }
         operator = btn;
@@ -325,6 +340,7 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
             }
             currentNumber = calculateOperator();
         }
+        currentNumber = removeLastDot(currentNumber);
     }
 
     private void clickReverseSign() {
@@ -354,39 +370,34 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
 
     private void clickFraction() {
         if (operator == null) {
-            firstOperand = currentNumber;
-            firstOperandSubOperator = "1/x";
+            firstOperandBeauty = "1/(" + String.valueOf(currentNumber) + ")";
         } else {
-            secondOperand = currentNumber;
-            secondOperandSubOperator = "1/x";
+            secondOperandBeauty = "1/(" + String.valueOf(currentNumber) + ")";
         }
         currentNumber = fraction();
     }
 
     private void clickSqr() {
         if (operator == null) {
-            firstOperand = currentNumber;
-            firstOperandSubOperator = "sqr";
+            firstOperandBeauty = "sqr(" + String.valueOf(currentNumber) + ")";
         } else {
-            secondOperand = currentNumber;
-            secondOperandSubOperator = "sqr";
+            secondOperandBeauty = "sqr(" + String.valueOf(currentNumber) + ")";
         }
         currentNumber = sqr();
     }
 
     private void clickSqrt() {
         if (operator == null) {
-            firstOperand = currentNumber;
-            firstOperandSubOperator = "sqrt";
+            firstOperandBeauty = "\u221A(" + String.valueOf(currentNumber) + ")";
         } else {
-            secondOperand = currentNumber;
-            secondOperandSubOperator = "sqrt";
+            secondOperandBeauty = "\u221A(" + String.valueOf(currentNumber) + ")";
         }
         currentNumber = sqrt();
     }
 
     private void clickClearEntry() {
         currentNumber = "0";
+        if (operator == null) firstOperandBeauty = null;
         updateMainScreen();
         updateHistoryScreen();
     }
@@ -398,6 +409,7 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
     }
 
     private void clickBackspace() {
+        if ("+-*%1/xsqrt".contains(prevBtn)) return;
         if (currentNumber.length() == 1) {
             currentNumber = "0";
         }
@@ -421,21 +433,29 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
 
     private void updateHistoryScreen() {
         String history = "";
-        String first = makeOperand(firstOperand, firstOperandSubOperator);
-        String second = makeOperand(secondOperand, secondOperandSubOperator);
+        String first = makeOperand(firstOperand, firstOperandBeauty);
+        String second = makeOperand(secondOperand, secondOperandBeauty);
+        first = removeLastDot(first);
+        second = removeLastDot(second);
+        Log.d("TAG,", "updateHistoryScreen: " + first + " -- " + second +" prevBtn: " + prevBtn);
         if (isInit) {
             textViewInputChain.setText(history);
             return;
         }
-        if (operator == null && !prevBtn.equals("=")) return;
+        if (operator == null && !prevBtn.equals("=") && !prevBtn.equals("1/x") && !prevBtn.equals("sqr") && !prevBtn.equals("sqrt")) return;
         if (operator == null && prevBtn.equals("=")) {
             history = first + " =";
             textViewInputChain.setText(history);
             return;
         };
+        if (operator == null) {
+            history = first;
+            textViewInputChain.setText(history);
+            return;
+        };
         if (prevBtn.equals("=")) {
             history = first + " " + operator + " " + second + " =";
-        } else if (prevBtn.equals("%")) {
+        } else if (prevBtn.equals("%") || prevBtn.equals("1/x") || prevBtn.equals("sqr") || prevBtn.equals("sqrt")) {
             history = first + " " + operator+ " " + second;
         } else {
             history = first + " " + operator;
@@ -461,7 +481,7 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
                 result = first / second;
                 break;
         }
-        return parse(result, 8);
+        return parse(result, 14);
     }
 
     private static boolean isNumeric(String str) {
@@ -481,33 +501,36 @@ public class StandardFragment extends Fragment implements View.OnClickListener, 
         Double first = Double.parseDouble(firstOperand);
         Double current = Double.parseDouble(currentNumber);
         Double result = first * current / 100;
-        return parse(result, 8);
+        return parse(result, 14);
     }
 
     private String fraction() {
         Double current = Double.parseDouble(currentNumber);
         Double result = 1 / current;
-        return parse(result, 8);
+        return parse(result, 14);
     }
 
     private String sqr() {
         Double current = Double.parseDouble(currentNumber);
         Double result = current * current;
-        return parse(result, 8);
+        return parse(result, 14);
     }
 
     private String sqrt() {
         Double current = Double.parseDouble(currentNumber);
         Double result = Math.sqrt(current);
-        return parse(result, 8);
+        return parse(result, 14);
     }
 
-    private String makeOperand(String operand, String subOperator) {
-//        if (subOperator == null) return operand;
-//        if (subOperator.equals("1/x")) return "1/(" + operand + ")";
-//        if (subOperator.equals("sqr")) return "sqr(" + operand + ")";
-//        if (subOperator.equals("sqrt")) return "\u221A(" + operand + ")";
+    private String makeOperand(String operand, String operandBeauty) {
+        if (operandBeauty != null) return operandBeauty;
         return operand;
     }
 
+    private String removeLastDot(String number) {
+        if (number.substring(number.length() - 1).equals(".")) {
+            return number.substring(0, number.length() - 1);
+        }
+        return  number;
+    }
 }
